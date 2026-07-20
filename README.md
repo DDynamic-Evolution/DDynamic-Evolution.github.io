@@ -90,15 +90,8 @@
 <body>
 <canvas id="rain-canvas" width="1920" height="965"></canvas>
 <div id="content">
-  <div id="ascii-art">
-▗▖  ▗▖▗▄▄▄▖▗▖ ▗▖ ▗▄▖  ▗▄▄▖▗▄▄▄▖▗▄▖ ▗▄▄▖ ▗▖  ▗▖
-▐▛▚▞▜▌  █  ▐▌▗▞▘▐▌ ▐▌▐▌     █ ▐▌ ▐▌▐▌ ▐▌▐▛▚▞▜▌
-▐▌  ▐▌  █  ▐▛▚▖ ▐▌ ▐▌ ▝▀▚▖  █ ▐▌ ▐▌▐▛▀▚▖▐▌  ▐▌
-▐▌  ▐▌▗▄█▄▖▐▌ ▐▌▝▚▄▞▘▗▄▄▞▘  █ ▝▚▄▞▘▐▌ ▐▌▐▌  ▐▌
-                                              
-                                              
-                                              </div>
-  <div id="tagline">Second Life Viewer</div>
+  
+  <div id="tagline">MikoStorm - A Second Life Viewer</div>
 </div>
 <div id="footer">
   <a href="https://github.com/DDynamic-Evolution/MikoStorm" target="_blank">github.com/DDynamic-Evolution/MikoStorm</a>
