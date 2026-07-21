@@ -1,7 +1,7 @@
 name: Update SL Users
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,24 @@ jobs:
           DATA=$(curl -s https://api.secondlife.com/datafeeds/secondlife.xml)
           USERS=$(echo "$DATA" | grep -oP '<inworld>\K[^<]+')
           SIGNUPS=$(echo "$DATA" | grep -oP '<signups>\K[^<]+')
-          echo "{\"users\":$USERS,\"signups\":\"$SIGNUPS\",\"updated\":\"$(date -u -Iseconds)\"}" > users.json
+          COMPONENTS=$(curl -s https://status.secondlifegrid.net/api/v2/components.json)
+          STATUS=$(curl -s https://status.secondlifegrid.net/api/v2/status.json)
+          PARSED=$(echo "$COMPONENTS" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+out={}
+for c in d.get('components',[]):
+    cat=c.get('group_id') or c.get('category','') or ''
+    if not cat:
+        out.setdefault('General',[]).append(c)
+    else:
+        out.setdefault(cat,[]).append(c)
+# remap to only keep name+status
+for cat in list(out.keys()):
+    out[cat]=[{'name':c['name'],'status':c['status']} for c in out[cat]]
+print(json.dumps(out))
+")
+          echo "{\"users\":$USERS,\"signups\":\"$SIGNUPS\",\"statuspage_status\":$(echo $STATUS | python3 -c 'import json,sys;d=json.load(sys.stdin);print(json.dumps(d[\"status\"]))'),\"components\":$PARSED,\"updated\":\"$(date -u -Iseconds)\"}" > users.json
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

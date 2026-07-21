@@ -89,6 +89,57 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
   }
+  #status-widget {
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 3;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 12px 16px;
+    max-width: 320px;
+    font-family: monospace;
+    font-size: 11px;
+    color: #aaa;
+    line-height: 1.6;
+  }
+  #status-widget .title {
+    color: #ccc;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+  #status-widget .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+  #status-widget .cat-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 1px 0;
+  }
+  #status-widget .cat-row:hover { color: #fff; }
+  #status-widget .sub-list { margin-left: 20px; display: none; }
+  #status-widget .sub-list.open { display: block; }
+  #status-widget .sub-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: #777;
+    padding: 0 0 1px 0;
+  }
+  #status-widget .status-ok { background: #4f4; }
+  #status-widget .status-degraded { background: #ff4; }
+  #status-widget .status-partial { background: #f80; }
+  #status-widget .status-major { background: #f44; }
+  #status-widget .status-maintenance { background: #888; }
 </style>
 </head>
 <body>
@@ -110,6 +161,11 @@
       <span class="label">&nbsp;Signups</span>
     </div>
   </div>
+</div>
+<div id="status-widget">
+  <div class="title">Second Life Status</div>
+  <div id="status-summary"></div>
+  <div id="status-categories"></div>
 </div>
 <div>
  <audio autoplay>
@@ -186,6 +242,90 @@
   }
   fetchOnlineCount();
   setInterval(fetchOnlineCount, 60000);
+
+  // Status widget
+  var statusMap = {
+    operational: 'ok',
+    degraded_performance: 'degraded',
+    partial_outage: 'partial',
+    major_outage: 'major',
+    under_maintenance: 'maintenance'
+  };
+  var statusLabel = {
+    operational: 'Operational',
+    degraded_performance: 'Degraded Performance',
+    partial_outage: 'Partial Outage',
+    major_outage: 'Major Outage',
+    under_maintenance: 'Maintenance'
+  };
+
+  function renderCategories(components) {
+    var c = document.getElementById('status-categories');
+    c.innerHTML = '';
+    Object.keys(components).forEach(function(cat) {
+      var items = components[cat];
+      var allOk = items.every(function(i) { return i.status === 'operational'; });
+      var worst = items.reduce(function(w, i) {
+        var o = ['operational','degraded_performance','partial_outage','major_outage','under_maintenance'];
+        return o.indexOf(i.status) > o.indexOf(w) ? i.status : w;
+      }, 'operational');
+
+      var row = document.createElement('div');
+      row.className = 'cat-row';
+      row.innerHTML = '<span class="status-dot status-' + statusMap[worst] + '"></span>' + cat;
+      var sub = document.createElement('div');
+      sub.className = 'sub-list';
+      items.forEach(function(i) {
+        var s = document.createElement('div');
+        s.className = 'sub-item';
+        s.innerHTML = '<span class="status-dot status-' + statusMap[i.status] + '"></span>' + i.name + ' <span style="color:#555;margin-left:auto">' + statusLabel[i.status] + '</span>';
+        sub.appendChild(s);
+      });
+      row.addEventListener('click', function() { sub.classList.toggle('open'); });
+      c.appendChild(row);
+      c.appendChild(sub);
+    });
+  }
+
+  function fetchStatus() {
+    // 1) From local users.json
+    fetch('users.json', { cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.statuspage_status) {
+          var s = d.statuspage_status;
+          var el = document.getElementById('status-summary');
+          el.innerHTML = '<span class="status-dot status-' + statusMap[s.indicator === 'none' ? 'operational' : s.indicator] + '"></span>' + s.description;
+        }
+        if (d.components) renderCategories(d.components);
+      })
+      .catch(function() {});
+
+    // 2) Direct API fallback
+    fetch('https://status.secondlifegrid.net/api/v2/status.json')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var s = d.status;
+        var el = document.getElementById('status-summary');
+        el.innerHTML = '<span class="status-dot status-' + statusMap[s.indicator === 'none' ? 'operational' : s.indicator] + '"></span>' + s.description;
+      })
+      .catch(function() {});
+
+    fetch('https://status.secondlifegrid.net/api/v2/components.json')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var out = {};
+        (d.components || []).forEach(function(c) {
+          var key = c.group_id || c.category || 'General';
+          if (!out[key]) out[key] = [];
+          out[key].push({name: c.name, status: c.status});
+        });
+        renderCategories(out);
+      })
+      .catch(function() {});
+  }
+  fetchStatus();
+  setInterval(fetchStatus, 300000);
 })();
 </script>
 
