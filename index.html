@@ -258,18 +258,24 @@
     major_outage: 'Major Outage',
     under_maintenance: 'Maintenance'
   };
+  var catNames = [
+    'Second Life Regions',
+    'Websites',
+    'Second Life Services',
+    'Inworld Services',
+    'External Support'
+  ];
 
-  function renderCategories(components) {
+  function renderCategories(groups) {
     var c = document.getElementById('status-categories');
     c.innerHTML = '';
-    Object.keys(components).forEach(function(cat) {
-      var items = components[cat];
-      var allOk = items.every(function(i) { return i.status === 'operational'; });
+    catNames.forEach(function(cat) {
+      var items = groups[cat];
+      if (!items || items.length === 0) return;
       var worst = items.reduce(function(w, i) {
         var o = ['operational','degraded_performance','partial_outage','major_outage','under_maintenance'];
         return o.indexOf(i.status) > o.indexOf(w) ? i.status : w;
       }, 'operational');
-
       var row = document.createElement('div');
       row.className = 'cat-row';
       row.innerHTML = '<span class="status-dot status-' + statusMap[worst] + '"></span>' + cat;
@@ -287,8 +293,24 @@
     });
   }
 
+  function groupComponents(flat) {
+    var groups = {};
+    var groupIdToName = {};
+    (flat || []).forEach(function(c) {
+      if (c.group) groupIdToName[c.id] = c.name;
+    });
+    (flat || []).forEach(function(c) {
+      if (c.group) return;
+      var cat = c.category;
+      if (!cat && c.group_id) cat = groupIdToName[c.group_id];
+      if (catNames.indexOf(cat) === -1) return;
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push({name: c.name, status: c.status});
+    });
+    return groups;
+  }
+
   function fetchStatus() {
-    // 1) From local users.json
     fetch('users.json', { cache: 'no-store' })
       .then(function(r) { return r.json(); })
       .then(function(d) {
@@ -301,7 +323,6 @@
       })
       .catch(function() {});
 
-    // 2) Direct API fallback
     fetch('https://status.secondlifegrid.net/api/v2/status.json')
       .then(function(r) { return r.json(); })
       .then(function(d) {
@@ -313,15 +334,7 @@
 
     fetch('https://status.secondlifegrid.net/api/v2/components.json')
       .then(function(r) { return r.json(); })
-      .then(function(d) {
-        var out = {};
-        (d.components || []).forEach(function(c) {
-          var key = c.group_id || c.category || 'General';
-          if (!out[key]) out[key] = [];
-          out[key].push({name: c.name, status: c.status});
-        });
-        renderCategories(out);
-      })
+      .then(function(d) { renderCategories(groupComponents(d.components)); })
       .catch(function() {});
   }
   fetchStatus();
