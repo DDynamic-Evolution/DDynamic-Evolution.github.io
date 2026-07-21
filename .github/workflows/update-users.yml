@@ -10,8 +10,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: |
-          COUNT=$(curl -s https://api.secondlife.com/datafeeds/secondlife.xml | grep -oP '<inworld>\K[^<]+')
-          echo "{\"users\":$COUNT,\"updated\":\"$(date -u -Iseconds)\"}" > users.json
+          DATA=$(curl -s https://api.secondlife.com/datafeeds/secondlife.xml)
+          USERS=$(echo "$DATA" | grep -oP '<inworld>\K[^<]+')
+          SIGNUPS=$(echo "$DATA" | grep -oP '<signups>\K[^<]+')
+          echo "{\"users\":$USERS,\"signups\":\"$SIGNUPS\",\"updated\":\"$(date -u -Iseconds)\"}" > users.json
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

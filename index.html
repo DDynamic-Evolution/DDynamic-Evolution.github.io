@@ -72,6 +72,10 @@
     letter-spacing: 2px;
     text-transform: uppercase;
   }
+  #online-stats .stat-row {
+    margin-bottom: 8px;
+  }
+  .stat-row:last-child { margin-bottom: 0; }
   #online-dot {
     display: inline-block;
     width: 7px; height: 7px;
@@ -93,13 +97,17 @@
   
   <div id="tagline">MikoStorm - A Second Life Viewer</div>
   <div id="online-stats">
-    <div style="margin-bottom: 6px;">
+    <div class="stat-row">
       <span id="online-dot"></span>
       <span class="label">Second Life</span>
     </div>
-    <div>
+    <div class="stat-row">
       <span class="count" id="online-count">--</span>
-      <span class="label">&nbsp;User Online</span>
+      <span class="label">&nbsp;Online</span>
+    </div>
+    <div class="stat-row">
+      <span class="count" id="signup-count">--</span>
+      <span class="label">&nbsp;Signups</span>
     </div>
   </div>
 </div>
@@ -154,11 +162,15 @@
   // Fetch online user count from Second Life API
   function fetchOnlineCount() {
     var el = document.getElementById('online-count');
+    var el2 = document.getElementById('signup-count');
 
     // 1) Lokale users.json (via GitHub Actions aktualisiert)
     fetch('users.json', { cache: 'no-store' })
       .then(function(r) { return r.json(); })
-      .then(function(d) { if (d.users) el.textContent = d.users.toLocaleString(); })
+      .then(function(d) {
+        if (d.users) el.textContent = Number(d.users).toLocaleString();
+        if (d.signups) el2.textContent = Number(d.signups.replace(/,/g, '')).toLocaleString();
+      })
       .catch(function() {});
 
     // 2) Direkter API-Versuch (CORS-fallback)
@@ -167,6 +179,8 @@
       .then(function(text) {
         var m = text.match(/<inworld>([^<]+)<\/inworld>/);
         if (m) el.textContent = m[1].trim();
+        var s = text.match(/<signups>([^<]+)<\/signups>/);
+        if (s) el2.textContent = s[1].trim();
       })
       .catch(function() {});
   }
