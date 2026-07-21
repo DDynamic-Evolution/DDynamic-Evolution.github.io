@@ -92,6 +92,16 @@
 <div id="content">
   
   <div id="tagline">MikoStorm - A Second Life Viewer</div>
+  <div id="online-stats">
+    <div style="margin-bottom: 6px;">
+      <span id="online-dot"></span>
+      <span class="label">Second Life</span>
+    </div>
+    <div>
+      <span class="count" id="online-count">--</span>
+      <span class="label">&nbsp;User Online</span>
+    </div>
+  </div>
 </div>
 <div>
  <audio autoplay>
@@ -143,19 +153,22 @@
 
   // Fetch online user count from Second Life API
   function fetchOnlineCount() {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://api.secondlife.com/datafeeds/secondlife.xml', true);
-    xhr.onload = function() {
-      if (xhr.status === 200) {
-        var parser = new DOMParser();
-        var xml = parser.parseFromString(xhr.responseText, 'text/xml');
-        var inworld = xml.getElementsByTagName('inworld')[0];
-        if (inworld) {
-          document.getElementById('online-count').textContent = inworld.textContent.trim();
-        }
-      }
-    };
-    xhr.send();
+    var el = document.getElementById('online-count');
+
+    // 1) Lokale users.json (via GitHub Actions aktualisiert)
+    fetch('users.json', { cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { if (d.users) el.textContent = d.users.toLocaleString(); })
+      .catch(function() {});
+
+    // 2) Direkter API-Versuch (CORS-fallback)
+    fetch('https://api.secondlife.com/datafeeds/secondlife.xml')
+      .then(function(r) { return r.text(); })
+      .then(function(text) {
+        var m = text.match(/<inworld>([^<]+)<\/inworld>/);
+        if (m) el.textContent = m[1].trim();
+      })
+      .catch(function() {});
   }
   fetchOnlineCount();
   setInterval(fetchOnlineCount, 60000);
