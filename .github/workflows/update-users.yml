@@ -18,16 +18,21 @@ jobs:
           PARSED=$(echo "$COMPONENTS" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
-out={}
+groups={}
+items=[]
 for c in d.get('components',[]):
-    cat=c.get('group_id') or c.get('category','') or ''
-    if not cat:
-        out.setdefault('General',[]).append(c)
+    if c.get('group'):
+        groups[c['id']]=c['name']
     else:
-        out.setdefault(cat,[]).append(c)
-# remap to only keep name+status
-for cat in list(out.keys()):
-    out[cat]=[{'name':c['name'],'status':c['status']} for c in out[cat]]
+        items.append(c)
+out={}
+for c in items:
+    gid=c.get('group_id')
+    if gid and gid in groups:
+        cat=groups[gid]
+    else:
+        cat=c.get('category','General')
+    out.setdefault(cat,[]).append({'name':c['name'],'status':c['status']})
 print(json.dumps(out))
 ")
           echo "{\"users\":$USERS,\"signups\":\"$SIGNUPS\",\"statuspage_status\":$(echo $STATUS | python3 -c 'import json,sys;d=json.load(sys.stdin);print(json.dumps(d[\"status\"]))'),\"components\":$PARSED,\"updated\":\"$(date -u -Iseconds)\"}" > users.json
